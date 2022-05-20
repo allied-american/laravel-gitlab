@@ -62,76 +62,87 @@ use Illuminate\Support\Arr;
  */
 class GitLabManager extends AbstractManager
 {
-    /**
-     * The factory instance.
-     *
-     * @var \GrahamCampbell\GitLab\GitLabFactory
-     */
-    protected $factory;
+  /**
+   * The factory instance.
+   *
+   * @var \GrahamCampbell\GitLab\GitLabFactory
+   */
+  protected $factory;
 
-    /**
-     * Create a new gitlab manager instance.
-     *
-     * @param \Illuminate\Contracts\Config\Repository $config
-     * @param \GrahamCampbell\GitLab\GitLabFactory    $factory
-     *
-     * @return void
-     */
-    public function __construct(Repository $config, GitLabFactory $factory)
-    {
-        parent::__construct($config);
-        $this->factory = $factory;
+  protected $sudo;
+
+  /**
+   * Create a new gitlab manager instance.
+   *
+   * @param \Illuminate\Contracts\Config\Repository $config
+   * @param \GrahamCampbell\GitLab\GitLabFactory    $factory
+   *
+   * @return void
+   */
+  public function __construct(Repository $config, GitLabFactory $factory)
+  {
+    parent::__construct($config);
+    $this->factory = $factory;
+  }
+
+  public function sudo(?string $sudo = null) {
+    $this->sudo = $sudo;
+
+    return $this;
+  }
+
+  /**
+   * Create the connection instance.
+   *
+   * @param array $config
+   *
+   * @return \Gitlab\Client
+   */
+  protected function createConnection(array $config)
+  {
+    $config['sudo'] = $this->sudo;
+    $this->sudo = null;
+
+    return $this->factory->make($config);
+  }
+
+  /**
+   * Get the configuration name.
+   *
+   * @return string
+   */
+  protected function getConfigName()
+  {
+    return 'gitlab';
+  }
+
+  /**
+   * Get the configuration for a connection.
+   *
+   * @param string|null $name
+   *
+   * @throws \InvalidArgumentException
+   *
+   * @return array
+   */
+  public function getConnectionConfig(string $name = null)
+  {
+    $config = parent::getConnectionConfig($name);
+
+    if (is_string($cache = Arr::get($config, 'cache'))) {
+      $config['cache'] = $this->getNamedConfig('cache', 'Cache', $cache);
     }
 
-    /**
-     * Create the connection instance.
-     *
-     * @param array $config
-     *
-     * @return \Gitlab\Client
-     */
-    protected function createConnection(array $config)
-    {
-        return $this->factory->make($config);
-    }
+    return $config;
+  }
 
-    /**
-     * Get the configuration name.
-     *
-     * @return string
-     */
-    protected function getConfigName()
-    {
-        return 'gitlab';
-    }
-
-    /**
-     * Get the configuration for a connection.
-     *
-     * @param string|null $name
-     *
-     * @throws \InvalidArgumentException
-     *
-     * @return array
-     */
-    public function getConnectionConfig(string $name = null)
-    {
-        $config = parent::getConnectionConfig($name);
-
-        if (is_string($cache = Arr::get($config, 'cache'))) {
-            $config['cache'] = $this->getNamedConfig('cache', 'Cache', $cache);
-        }
-
-        return $config;
-    }
-
-    /**
-     * Get the factory instance.
-     *
-     * @return \GrahamCampbell\GitLab\GitLabFactory
-     */
-    public function getFactory()
-    {
-        return $this->factory;
-    }
+  /**
+   * Get the factory instance.
+   *
+   * @return \GrahamCampbell\GitLab\GitLabFactory
+   */
+  public function getFactory()
+  {
+    return $this->factory;
+  }
 }
